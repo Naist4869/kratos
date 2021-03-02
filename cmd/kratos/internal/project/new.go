@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	serviceLayoutURL = "https://github.com/go-kratos/kratos-layout.git"
+	serviceLayoutURL = "https://github.com/Naist4869/kratos-layout.git"
 )
 
 // Project is a project template.
