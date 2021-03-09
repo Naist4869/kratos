@@ -26,9 +26,9 @@ type builder struct {
 }
 
 // NewBuilder creates a builder which is used to factory registry resolvers.
-func NewBuilder(r registry.Discoverer, opts ...Option) resolver.Builder {
+func NewBuilder(d registry.Discoverer, opts ...Option) resolver.Builder {
 	b := &builder{
-		discoverer: r,
+		discoverer: d,
 		logger:     log.DefaultLogger,
 	}
 	for _, o := range opts {
@@ -42,10 +42,13 @@ func (d *builder) Build(target resolver.Target, cc resolver.ClientConn, opts res
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithCancel(context.Background())
 	r := &discoveryResolver{
-		w:   w,
-		cc:  cc,
-		log: log.NewHelper("grpc/resolver/discovery", d.logger),
+		w:      w,
+		cc:     cc,
+		log:    log.NewHelper("grpc/resolver/discovery", d.logger),
+		ctx:    ctx,
+		cancel: cancel,
 	}
 	go r.watch()
 	return r, nil

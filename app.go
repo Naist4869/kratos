@@ -57,8 +57,8 @@ func (a *App) Server() []transport.Server {
 	return a.opts.servers
 }
 
-// Registrar returns registry.
-func (a *App) Registrar() registry.Registrar {
+// Registry returns registry.
+func (a *App) Registry() registry.Registrar {
 	return a.opts.registrar
 }
 
@@ -79,6 +79,11 @@ func (a *App) Run() error {
 		g.Go(func() error {
 			return srv.Start()
 		})
+	}
+	for _, fn := range a.opts.before {
+		if err := fn(); err != nil {
+			return err
+		}
 	}
 	if a.opts.registrar != nil {
 		if err := a.opts.registrar.Register(a.opts.ctx, a.instance); err != nil {
@@ -112,6 +117,11 @@ func (a *App) Stop() error {
 	}
 	if a.cancel != nil {
 		a.cancel()
+	}
+	for _, fn := range a.opts.after {
+		if err := fn(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
