@@ -5,11 +5,10 @@ import (
 	"log"
 	"net/http"
 
-	pb "github.com/go-kratos/examples/helloworld/helloworld"
+	pb "github.com/go-kratos/kratos/examples/helloworld/helloworld"
 	"github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/middleware"
 	"github.com/go-kratos/kratos/v2/middleware/recovery"
-	"github.com/go-kratos/kratos/v2/middleware/status"
 	transgrpc "github.com/go-kratos/kratos/v2/transport/grpc"
 	transhttp "github.com/go-kratos/kratos/v2/transport/http"
 )
@@ -20,7 +19,14 @@ func main() {
 }
 
 func callHTTP() {
-	client, err := transhttp.NewClient(context.Background())
+	client, err := transhttp.NewClient(
+		context.Background(),
+		transhttp.WithMiddleware(
+			middleware.Chain(
+				recovery.Recovery(),
+			),
+		),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -51,7 +57,6 @@ func callGRPC() {
 		transgrpc.WithEndpoint("127.0.0.1:9000"),
 		transgrpc.WithMiddleware(
 			middleware.Chain(
-				status.Client(),
 				recovery.Recovery(),
 			),
 		),
@@ -71,7 +76,7 @@ func callGRPC() {
 	if err != nil {
 		log.Printf("[grpc] SayHello error: %v\n", err)
 	}
-	if errors.IsInvalidArgument(err) {
+	if errors.IsBadRequest(err) {
 		log.Printf("[grpc] SayHello error is invalid argument: %v\n", err)
 	}
 }

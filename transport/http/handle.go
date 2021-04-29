@@ -3,25 +3,18 @@ package http
 import (
 	"io/ioutil"
 	"net/http"
-	"strings"
 
 	"github.com/go-kratos/kratos/v2/encoding"
-	"github.com/go-kratos/kratos/v2/errors"
+	"github.com/go-kratos/kratos/v2/encoding/json"
+	xhttp "github.com/go-kratos/kratos/v2/internal/http"
 	"github.com/go-kratos/kratos/v2/middleware"
 	"github.com/go-kratos/kratos/v2/transport/http/binding"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
-const (
-	// SupportPackageIsVersion1 These constants should not be referenced from any other code.
-	SupportPackageIsVersion1 = true
-
-	baseContentType = "application"
-)
-
-var (
-	acceptHeader      = http.CanonicalHeaderKey("Accept")
-	contentTypeHeader = http.CanonicalHeaderKey("Content-Type")
-)
+// SupportPackageIsVersion1 These constants should not be referenced from any other code.
+const SupportPackageIsVersion1 = true
 
 // DecodeRequestFunc is decode request func.
 type DecodeRequestFunc func(*http.Request, interface{}) error
@@ -82,7 +75,7 @@ func Middleware(m middleware.Middleware) HandleOption {
 
 // decodeRequest decodes the request body to object.
 func decodeRequest(req *http.Request, v interface{}) error {
-	subtype := contentSubtype(req.Header.Get(contentTypeHeader))
+	subtype := xhttp.ContentSubtype(req.Header.Get(xhttp.HeaderContentType))
 	if codec := encoding.GetCodec(subtype); codec != nil {
 		data, err := ioutil.ReadAll(req.Body)
 		if err != nil {
@@ -95,55 +88,39 @@ func decodeRequest(req *http.Request, v interface{}) error {
 
 // encodeResponse encodes the object to the HTTP response.
 func encodeResponse(w http.ResponseWriter, r *http.Request, v interface{}) error {
-	var codec encoding.Codec
-	for _, accept := range r.Header[acceptHeader] {
-		if codec = encoding.GetCodec(contentSubtype(accept)); codec != nil {
-			break
-		}
-	}
-	if codec == nil {
-		codec = encoding.GetCodec("json")
-	}
+	codec := codecForRequest(r)
 	data, err := codec.Marshal(v)
 	if err != nil {
 		return err
 	}
-	w.Header().Set(contentTypeHeader, contentType(codec.Name()))
-	w.Write(data)
+	w.Header().Set(xhttp.HeaderContentType, xhttp.ContentType(codec.Name()))
+	_, _ = w.Write(data)
 	return nil
 }
 
-// encodeError encodes the erorr to the HTTP response.
+// encodeError encodes the error to the HTTP response.
 func encodeError(w http.ResponseWriter, r *http.Request, err error) {
-	se, ok := errors.FromError(err)
-	if !ok {
-		se = &errors.StatusError{
-			Code:    2,
-			Message: err.Error(),
-		}
+	st, _ := status.FromError(err)
+	data, err := protojson.Marshal(st.Proto())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
-	w.WriteHeader(se.HTTPStatus())
-	encodeResponse(w, r, se)
+	w.Header().Set(xhttp.HeaderContentType, "application/json; charset=utf-8")
+	w.WriteHeader(xhttp.StatusFromGRPCCode(st.Code()))
+	w.Write(data)
 }
 
-func contentType(subtype string) string {
-	return strings.Join([]string{baseContentType, subtype}, "/")
-}
-
-func contentSubtype(contentType string) string {
-	if contentType == baseContentType {
-		return ""
-	}
-	if !strings.HasPrefix(contentType, baseContentType) {
-		return ""
-	}
-	switch contentType[len(baseContentType)] {
-	case '/', ';':
-		if i := strings.Index(contentType, ";"); i != -1 {
-			return contentType[len(baseContentType)+1 : i]
+// codecForRequest get encoding.Codec via http.Request
+func codecForRequest(r *http.Request) encoding.Codec {
+	var codec encoding.Codec
+	for _, accept := range r.Header[xhttp.HeaderAccept] {
+		if codec = encoding.GetCodec(xhttp.ContentSubtype(accept)); codec != nil {
+			break
 		}
-		return contentType[len(baseContentType)+1:]
-	default:
-		return ""
 	}
+	if codec == nil {
+		codec = encoding.GetCodec(json.Name)
+	}
+	return codec
 }

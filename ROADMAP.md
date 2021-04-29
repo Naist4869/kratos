@@ -6,14 +6,14 @@ This document defines the roadmap for Kratos development.
 - [x] Config
     - [x] Local Files
     - [x] K8s ConfigMap
-    - [ ] Consul
-    - [ ] Etcd
-    - [ ] Nacos
-- [ ] Registry
-    - [ ] Consul
-    - [ ] Etcd
-    - [ ] K8s
-    - [ ] Nacos
+    - [x] Consul
+    - [x] Etcd
+    - [x] Nacos
+- [x] Registry
+    - [x] Consul
+    - [x] Etcd
+    - [x] K8s
+    - [x] Nacos
 - [x] Encoding
     - [x] JSON
     - [x] Protobuf
@@ -26,10 +26,10 @@ This document defines the roadmap for Kratos development.
     - [x] recovery
     - [x] gRPC status
     - [x] transport tracing
-    - [x] validator
-    - [ ] authentication
-    - [ ] ratelimit
-    - [ ] circuitbreaker
+    - [x] Validator
+    - [ ] Authentication
+    - [ ] Ratelimit
+    - [ ] CircuitBreaker
 - [x] Metrics
     - [x] Prometheus
     - [x] DataDog
@@ -45,13 +45,35 @@ This document defines the roadmap for Kratos development.
         - [ ] Streaming Handler
 - [ ] Cache
     - [ ] go-redis
-- [ ] Queue
-    - [ ] Broker API
-    - [ ] Kafka
+- [x] Event
+    - [x] Pub/Sub
+    - [x] Kafka
     - [ ] Nats
 - [ ] Database
     - [ ] Ent
     - [ ] Gorm
+
+## Platform
+- [ ] Kratos API
+    - [ ] Auth
+    - [ ] Config
+    - [ ] Registry
+    - [ ] Events
+- [ ] Kratos Runtime
+    - [ ] Secrets
+    - [ ] Service-to-Service
+    - [ ] Publish and Subscribe
+    - [ ] Observability
+    - [ ] Controllable
+- [ ] Kratos UI
+    - [ ] Auth
+    - [ ] Config
+    - [ ] Services
+    - [ ] Endpoints
+    - [ ] Ratelimit
+    - [ ] CircuitBreaker
+    - [ ] FaultInjection
+    - [ ] TrafficPolicy
 
 ## Tools
 - [x] Kratos

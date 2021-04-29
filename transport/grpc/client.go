@@ -6,12 +6,12 @@ import (
 
 	"github.com/go-kratos/kratos/v2/middleware"
 	"github.com/go-kratos/kratos/v2/middleware/recovery"
-	"github.com/go-kratos/kratos/v2/middleware/status"
 	"github.com/go-kratos/kratos/v2/registry"
 	"github.com/go-kratos/kratos/v2/transport"
 	"github.com/go-kratos/kratos/v2/transport/grpc/resolver/discovery"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/balancer/roundrobin"
 )
 
 // ClientOption is gRPC client option.
@@ -38,10 +38,10 @@ func WithMiddleware(m middleware.Middleware) ClientOption {
 	}
 }
 
-// WithRegistry with client registry.
-func WithRegistry(d registry.Discoverer) ClientOption {
+// WithDiscovery with client discovery.
+func WithDiscovery(d registry.Discovery) ClientOption {
 	return func(o *clientOptions) {
-		o.discoverer = d
+		o.discovery = d
 	}
 }
 
@@ -57,7 +57,7 @@ type clientOptions struct {
 	endpoint   string
 	timeout    time.Duration
 	middleware middleware.Middleware
-	discoverer registry.Discoverer
+	discovery  registry.Discovery
 	grpcOpts   []grpc.DialOption
 }
 
@@ -76,17 +76,17 @@ func dial(ctx context.Context, insecure bool, opts ...ClientOption) (*grpc.Clien
 		timeout: 500 * time.Millisecond,
 		middleware: middleware.Chain(
 			recovery.Recovery(),
-			status.Client(),
 		),
 	}
 	for _, o := range opts {
 		o(&options)
 	}
 	var grpcOpts = []grpc.DialOption{
+		grpc.WithBalancerName(roundrobin.Name),
 		grpc.WithUnaryInterceptor(unaryClientInterceptor(options.middleware, options.timeout)),
 	}
-	if options.discoverer != nil {
-		grpcOpts = append(grpcOpts, grpc.WithResolvers(discovery.NewBuilder(options.discoverer)))
+	if options.discovery != nil {
+		grpcOpts = append(grpcOpts, grpc.WithResolvers(discovery.NewBuilder(options.discovery)))
 	}
 	if insecure {
 		grpcOpts = append(grpcOpts, grpc.WithInsecure())

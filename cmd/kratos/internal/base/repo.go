@@ -3,6 +3,11 @@ package base
 import (
 	"context"
 	"errors"
+
+	"github.com/go-git/go-git/v5/plumbing"
+
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
+
 	"os"
 	"path"
 	"strings"
@@ -18,9 +23,11 @@ type Repo struct {
 
 // NewRepo new a repository manager.
 func NewRepo(url string) *Repo {
+	start := strings.Index(url, "//")
+	end := strings.LastIndex(url, "/")
 	return &Repo{
 		url:  url,
-		home: kratosHomeWithDir("repo"),
+		home: kratosHomeWithDir("repo/" + url[start+2:end]),
 	}
 }
 
@@ -31,8 +38,8 @@ func (r *Repo) Path() string {
 	return path.Join(r.home, r.url[start+1:end])
 }
 
-// Pull fetchs the repository from remote url.
-func (r *Repo) Pull(ctx context.Context, url string) error {
+// Pull fetch the repository from remote url.
+func (r *Repo) Pull(ctx context.Context) error {
 	repo, err := git.PlainOpen(r.Path())
 	if err != nil {
 		return err
@@ -44,6 +51,10 @@ func (r *Repo) Pull(ctx context.Context, url string) error {
 	if err = w.PullContext(ctx, &git.PullOptions{
 		RemoteName: "origin",
 		Progress:   os.Stdout,
+		Auth: &http.BasicAuth{
+			Username: "ljc",
+			Password: "QQ123ljc..",
+		},
 	}); errors.Is(err, git.NoErrAlreadyUpToDate) {
 		return nil
 	}
@@ -53,11 +64,25 @@ func (r *Repo) Pull(ctx context.Context, url string) error {
 // Clone clones the repository to cache path.
 func (r *Repo) Clone(ctx context.Context) error {
 	if _, err := os.Stat(r.Path()); !os.IsNotExist(err) {
-		return r.Pull(ctx, r.url)
+		return r.Pull(ctx)
 	}
-	_, err := git.PlainCloneContext(ctx, r.Path(), false, &git.CloneOptions{
+	repository, err := git.PlainCloneContext(ctx, r.Path(), false, &git.CloneOptions{
 		URL:      r.url,
 		Progress: os.Stdout,
+		Auth: &http.BasicAuth{
+			Username: "ljc",
+			Password: "QQ123ljc..",
+		},
+	})
+	if err != nil {
+		return err
+	}
+	worktree, err := repository.Worktree()
+	if err != nil {
+		return err
+	}
+	err = worktree.Checkout(&git.CheckoutOptions{
+		Branch: plumbing.NewRemoteReferenceName("origin", "pay"),
 	})
 	return err
 }
