@@ -82,7 +82,7 @@ func (r *Repo) Clone(ctx context.Context) error {
 		return err
 	}
 	err = worktree.Checkout(&git.CheckoutOptions{
-		Branch: plumbing.NewRemoteReferenceName("origin", "pay"),
+		Branch: plumbing.NewRemoteReferenceName("origin", "upstream"),
 	})
 	return err
 }
